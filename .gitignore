@@ -1,0 +1,6 @@
+.pio
+CMakeListsPrivate.txt
+cmake-build-*/
+**/node_modules
+**/package-lock.json
+.idea
