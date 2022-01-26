@@ -15,6 +15,7 @@
     },
     /* noEmit - Snowpack builds (emits) files, not tsc. */
     "noEmit": true,
+    "sourceMap": false,
     /* Additional Options */
     "strict": true,
     "skipLibCheck": true,

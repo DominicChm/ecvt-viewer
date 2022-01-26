@@ -110,10 +110,4 @@ void loop() {
             state = WAIT_PACKET_FILL;
             break;
     }
-
-    if (millis() - 100 > last_emitted) {
-        comm_buf[comm_size++] = 0xAA;
-        last_emitted = millis();
-    }
-// write your code here
 }

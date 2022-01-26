@@ -23,16 +23,17 @@ export default {
         minify: true,
         target: 'es2018',
         sourceMap: false,
+
     },
     packageOptions: {
-        polyfillNode: true
-        /* ... */
+        polyfillNode: true,
+        sourceMap: false,
+
     },
     devOptions: {
-        /* ... */
     },
     buildOptions: {
-        out: "../data"
-        /* ... */
+        out: "../data",
+        sourceMap: false,
     },
 };
