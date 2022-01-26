@@ -4,19 +4,24 @@
 #include <WiFi.h>
 #include <ESPAsyncWebServer.h>
 #include "Communication.h"
+#include <ESPmDNS.h>
+HardwareSerial Serial2(2);
 
 #define FORMAT_SPIFFS_IF_FAILED true
 #define SERIAL_OUT Serial
 
-#include <ESPmDNS.h>
-// DNS!
-// https://gist.github.com/Cyclenerd/7c9cba13360ec1ec9d2ea36e50c7ff77
+#define SSID "ecvt_data"
+#define PASSWORD "123456789"
+
+// Serial port used for getting incoming data from teensy.
+#define SERIAL_DATA Serial2
+#define SERIAL_DATA_BAUD 115200
 
 const byte DNS_PORT = 53;          // Capture DNS requests on port 53
 IPAddress apIP(192, 168, 1, 1);    // Private network for server
 
-const char *ssid = "ecvt_data";
-const char *password = "123456789";
+const char *ssid = SSID;
+const char *password = PASSWORD;
 
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
@@ -40,6 +45,7 @@ void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventTyp
 
 void setup() {
     Serial.begin(115200);
+    Serial2.begin(SERIAL_DATA_BAUD); // TEENSY BAUDRATE - CHANGE AS NEEDED.
 
     if (!SPIFFS.begin(FORMAT_SPIFFS_IF_FAILED)) {
         Serial.println("SPIFFS Mount Failed");
@@ -74,8 +80,6 @@ const uint8_t START_BYTE_VAL = 0xAA; // 1010 1010
 const int8_t CHECK_DATA_SIZE = 2;   // Bytes
 const uint8_t TOTAL_SIZE = sizeof(Data) + START_DATA_SIZE + CHECK_DATA_SIZE;
 
-unsigned long last_emitted = millis();
-
 void loop() {
     static uint8_t comm_buf[1024];
     static size_t comm_size;
@@ -87,8 +91,8 @@ void loop() {
             break;
 
         case WAIT_PACKET_FILL:
-            if (SERIAL_OUT.available())
-                comm_buf[comm_size++] = Serial.read();
+            if (SERIAL_DATA.available())
+                comm_buf[comm_size++] = SERIAL_DATA.read();
 
             if (comm_size > TOTAL_SIZE)
                 state = TRY_VALIDATE_PACKET;

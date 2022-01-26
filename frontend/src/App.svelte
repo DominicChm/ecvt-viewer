@@ -3,24 +3,7 @@
     import ctypes, {cStruct} from "c-type-util"
     import Papa from "papaparse"
 
-    let ws_connected = false;
-
-    Uint8Array.from([1, 2, 3]);
-
-    let ws;
-    let lastData = "NO DATA";
-    let data = {engine: {}, primary: {}, secondary: {}}
-
-    let saveState: {
-        stream: WritableStream | null,
-        numSaved: number,
-        writer: WritableStreamDefaultWriter<any> | null
-    } = {
-        stream: null,
-        writer: null,
-        numSaved: 0,
-    };
-
+    //=========== MODIFY THIS STRUCT TO MATCH INCOMING DATA! ==============//
     const ct = ctypes.cStruct({
         startBytes: ctypes.uint16,
         time: ctypes.uint32,
@@ -46,6 +29,25 @@
         secondaryLC: ctypes.int16,
         secondaryPID: ctypes.int16,
     });
+
+
+    let ws_connected = false;
+
+    Uint8Array.from([1, 2, 3]);
+
+    let ws;
+    let lastData = "NO DATA";
+    let data = {engine: {}, primary: {}, secondary: {}}
+
+    let saveState: {
+        stream: WritableStream | null,
+        numSaved: number,
+        writer: WritableStreamDefaultWriter<any> | null
+    } = {
+        stream: null,
+        writer: null,
+        numSaved: 0,
+    };
 
     function handleData(newData) {
         //console.log(saveState.writer);
