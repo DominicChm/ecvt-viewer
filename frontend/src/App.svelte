@@ -1,5 +1,6 @@
 <script lang="ts">
-    import streamSaver from 'streamsaver'
+    // @ts-ignore
+    const streamSaver = window.streamSaver;
     import ctypes, {cStruct} from "c-type-util"
     import Papa from "papaparse"
 
