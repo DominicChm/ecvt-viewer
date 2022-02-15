@@ -1,9 +1,10 @@
 <script lang="ts">
-    // @ts-ignore
-    const streamSaver = window.streamSaver;
+
     import ctypes, {cStruct} from "c-type-util"
     import Papa from "papaparse"
-
+    // @ts-ignore
+    const streamSaver = window.streamSaver;
+    streamSaver.mitm = "/mitm.html"
     //=========== MODIFY THIS STRUCT TO MATCH INCOMING DATA! ==============//
     const ct = ctypes.cStruct({
         startBytes: ctypes.uint16,
