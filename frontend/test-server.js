@@ -70,7 +70,7 @@ wss.on('connection', function connection(ws) {
     setInterval(send_garbage, 1000);
 
     function send_garbage() {
-        ws.send(raw_ct.allocLE({
+        let dat = raw_ct.allocLE({
             startBytes: 0xAAAA,
             time: 0x01,
             // Engine
@@ -93,6 +93,15 @@ wss.on('connection', function connection(ws) {
             sEnc: 2,
             sLC: 3,
             sPID: 4,
-        }));
+        });
+        dat = new Uint8Array(dat);
+        //dat = Uint8Array.from([0xAA, 0xAA]);
+
+        dat[0] = 0xaa;
+        ws.send(new Uint8Array(dat).slice(dat.byteLength / 2));
+        ws.send(new Uint8Array(dat).slice(0, dat.byteLength / 2));
+
+        console.log(dat);
+        //console.log(new Uint8Array(dat));
     }
 });

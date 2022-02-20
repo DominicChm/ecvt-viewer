@@ -11,8 +11,8 @@
 #define SERIAL_DEBUG Serial
 #define SERIAL_DEBUG_BAUD 115200
 
-#define SSID "rAhUl-eCvT"
-#define PASSWORD "123456789"
+#define SSID "rahul-dyno"
+//#define PASSWORD "123456789"
 
 // Serial port used for getting incoming data from teensy.
 #define SERIAL_DATA Serial2
@@ -47,7 +47,7 @@ void setup() {
     if (!SPIFFS.begin(FORMAT_SPIFFS_IF_FAILED)) {
         SERIAL_DEBUG.println("SPIFFS Mount Failed");
 
-        led.Blink(100, 100).Forever();
+        led.Blink(100, 1000).Forever();
         while (true) led.Update();
     }
 
@@ -55,26 +55,29 @@ void setup() {
     server.addHandler(&ws);
     server.serveStatic("/", SPIFFS, "/").setDefaultFile("index.html");
 
-    if (!MDNS.begin("ecvt")) {
-        Serial.println("Error starting mDNS");
-        led.Blink(100, 100).Blink(1000, 1000).Forever();
-        while (true) led.Update();
-    }
-
     WiFi.disconnect();
-    WiFi.softAPConfig(apIP, apIP, IPAddress(255, 255, 255, 0));
+    WiFi.config(
+            IPAddress(192, 168, 1, 2),
+            IPAddress(192, 168, 1, 1),
+            IPAddress(255, 255, 255, 0)
+    );
+    WiFi.setHostname("dyno");
 
-#ifdef PASSWORD
-    WiFi.softAP(SSID);
+#ifndef PASSWORD
+    WiFi.begin(SSID);
 #else
-    WiFi.softAP(SSID, PASSWORD);
+    WiFi.begin(SSID, PASSWORD);
 #endif
-
-    Serial.println(WiFi.softAPIP());
+    led.Blink(100, 500).Forever();
+    while (WiFi.status() != WL_CONNECTED) {
+        delay(250);
+        led.Update();
+    }
+    Serial.println(WiFi.localIP());
 
     server.begin();
     Serial.println("BEGAN");
-    led.Blink(500, 500).Forever();
+    led.Blink(1000, 1000).Forever();
 }
 
 
@@ -88,11 +91,19 @@ const uint8_t START_DATA_SIZE = 2;   // Bytes
 const uint8_t START_BYTE_VAL = 0xAA; // 1010 1010
 const int8_t CHECK_DATA_SIZE = 2;   // Bytes
 const uint8_t TOTAL_SIZE = sizeof(Data) + START_DATA_SIZE + CHECK_DATA_SIZE;
+unsigned long lastNotif = 0;
+
+const int DISPATCH_SIZE = 1500;
+const long int DISPATCH_TIMEOUT = 1000;
 
 void loop() {
-    static uint8_t comm_buf[1024];
-    static size_t comm_size;
+    static uint8_t comm_buf[DISPATCH_SIZE + 5];
+    static size_t comm_size = 0;
     static CommState state = INITIALIZE;
+
+    static char msg_buf[1024];
+    static unsigned long serial_bytes = 0;
+    static unsigned long last_write = 0;
 
     switch (state) {
         case INITIALIZE:
@@ -100,31 +111,28 @@ void loop() {
             break;
 
         case WAIT_PACKET_FILL:
-            if (SERIAL_DATA.available())
+            if (SERIAL_DATA.available()) {
                 comm_buf[comm_size++] = SERIAL_DATA.read();
-
-            if (comm_size > TOTAL_SIZE)
-                state = TRY_VALIDATE_PACKET;
-
-            break;
-
-        case TRY_VALIDATE_PACKET:
-            Serial.println("VALIDATING");
-            if (comm_buf[0] == START_BYTE_VAL && comm_buf[1] == START_BYTE_VAL)
-                state = REPLICATE_FRAME;
-            else {
-                memcpy(&comm_buf, &comm_buf[1], comm_size - 1);
-                comm_size--;
-                state = WAIT_PACKET_FILL;
+                serial_bytes++;
             }
+
+            if (comm_size >= DISPATCH_SIZE || (millis() - last_write > DISPATCH_TIMEOUT && comm_size > TOTAL_SIZE))
+                state = REPLICATE_FRAME;
+
             break;
 
         case REPLICATE_FRAME:
-            ws.binaryAll(comm_buf, TOTAL_SIZE);
-            memcpy(&comm_buf, &comm_buf[TOTAL_SIZE], comm_size - TOTAL_SIZE);
-            comm_size -= TOTAL_SIZE;
+            ws.binaryAll(comm_buf, comm_size);
+            comm_size = 0;
+            last_write = millis();
             state = WAIT_PACKET_FILL;
             break;
+    }
+
+    if (millis() - lastNotif > 1000) {
+        sprintf(msg_buf, "RX: %ld", serial_bytes);
+        ws.textAll(msg_buf);
+        lastNotif = millis();
     }
 
     led.Update();

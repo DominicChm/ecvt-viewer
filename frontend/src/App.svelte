@@ -1,10 +1,12 @@
 <script lang="ts">
 
-    import ctypes, {cStruct} from "c-type-util"
+    import ctypes from "c-type-util"
     import Papa from "papaparse"
+
+    let savedData = [];
+    let savedDataLen = 0;
+    let saving = false;
     // @ts-ignore
-    const streamSaver = window.streamSaver;
-    streamSaver.mitm = "/mitm.html"
     //=========== MODIFY THIS STRUCT TO MATCH INCOMING DATA! ==============//
     const ct = ctypes.cStruct({
         startBytes: ctypes.uint16,
@@ -41,27 +43,14 @@
     let lastData = "NO DATA";
     let data = {engine: {}, primary: {}, secondary: {}}
 
-    let saveState: {
-        stream: WritableStream | null,
-        numSaved: number,
-        writer: WritableStreamDefaultWriter<any> | null
-    } = {
-        stream: null,
-        writer: null,
-        numSaved: 0,
-    };
-
     function handleData(newData) {
         //console.log(saveState.writer);
         const cleanedData = {...newData};
         delete cleanedData.startBytes;
 
         data = cleanedData;
-
-        const csv = Papa.unparse([cleanedData], {header: saveState.numSaved === 0});
-        console.log(csv, newData);
-        if (saveState.writer?.write(new TextEncoder().encode(csv + "\n")))
-            saveState.numSaved += 1;
+        if (saving) savedData.push(data);
+        savedDataLen = savedData.length;
 
     }
 
@@ -70,15 +59,41 @@
         const evd = event.data;
         if (evd instanceof Blob) {
             evd.arrayBuffer().then(resolved => {
-                const raw = new Uint8Array(resolved);
-                handleData(ct.readLE(resolved));
-                lastData = Array.from(raw).map(n => n.toString(16).padStart(2, "0")).join(" ");
+                parseData(resolved);
+                console.log(new Uint8Array(resolved));
             });
         }
     }
 
+    let rawBuf = new Uint8Array(10000);
+    let rawLen = 0;
+
+    function parseData(data: ArrayBuffer) {
+        //Concat new data onto old.
+        rawBuf.set(new Uint8Array(data), rawLen);
+        rawLen += data.byteLength;
+
+        while (rawLen > ct.size) {
+            if (!(rawBuf[0] === 0xAA && rawBuf[1] === 0xAA)) {
+                rawBuf.set(rawBuf.subarray(1)); //Chop off first byte.
+                rawLen--;
+                continue;
+            }
+            //console.log(new Uint8Array(data));
+            //console.log(rawBuf.slice(0, 30));
+
+            const parsed = ct.readLE(rawBuf.buffer, rawBuf.byteOffset);
+            lastData = Array.from(rawBuf.slice(0, ct.size)).map(n => n.toString(16).padStart(2, "0")).join(" ");
+            handleData(parsed);
+            rawLen -= ct.size;
+        }
+
+    }
+
     function connect() {
-        ws = new WebSocket(`ws://${window.location.hostname}:80/ws`);
+        //ws = new WebSocket(`ws://${window.location.hostname}:80/ws`);
+        ws = new WebSocket(`ws://192.168.1.2:80/ws`);
+
         ws.onopen = function () {
             // subscribe to some channels
             ws_connected = true;
@@ -104,12 +119,8 @@
     connect();
 
     function startSave() {
-        saveState.stream = streamSaver.createWriteStream('ecvt_data.csv', {
-            writableStrategy: undefined, // (optional)
-            readableStrategy: undefined  // (optional)
-        });
-
-        saveState.writer = saveState.stream.getWriter();
+        savedData = [];
+        saving = true;
         console.log("Started saving!");
     }
 
@@ -118,14 +129,27 @@
     }, false);
 
     function stopSave() {
+        if (!saving) return;
+
         console.log("Stopping saving!");
-        saveState.writer?.close();
-        saveState = {
-            numSaved: 0,
-            stream: null,
-            writer: null,
-        }
+        const data = Papa.unparse(savedData);
+        download("ecvtdat.csv", data);
+        saving = false;
     }
+
+    function download(filename, text) {
+        let element = document.createElement('a');
+        element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
+        element.setAttribute('download', filename);
+
+        element.style.display = 'none';
+        document.body.appendChild(element);
+
+        element.click();
+
+        document.body.removeChild(element);
+    }
+
 
 </script>
 
@@ -229,9 +253,9 @@
     </table>
     <div style="height: 10rem"></div>
 
-    {#if (!saveState.stream)}
+    {#if (!saving)}
         <button disabled={!ws_connected} class="bigButton" on:click={startSave}>Start Saving</button>
     {:else}
-        <button class="activated bigButton" on:click={stopSave}>Stop (Saved {saveState.numSaved})</button>
+        <button class="activated bigButton" on:click={stopSave}>Finalize (Saved {savedDataLen})</button>
     {/if}
 </div>
