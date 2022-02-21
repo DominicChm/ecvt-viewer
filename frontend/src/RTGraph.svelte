@@ -61,13 +61,60 @@
 </script>
 
 <style>
-    canvas {
-        border: 1px solid white;
-        background: #222;
+    .container {
+        width: 100%;
+        height: 100%;
         box-sizing: border-box;
+        padding: .25rem;
+        position: relative;
+    }
+    #root {
+        display: flex;
+        flex-direction: row;
+        border: 1px solid white;
+        /*background: red;*/
+    }
 
+    canvas {
+        background: #222;
+        min-width: 0;
+    }
+
+    pre {
+        margin: 0 0;
+        padding: .25rem;
+    }
+
+    input {
+        width: auto;
+        font-family: monospace;
+    }
+
+    .sep {
+        border: .5px solid white;
     }
 </style>
 
-<canvas bind:this={canvas} style="width: 100%; height: 100%;">
-</canvas>
+<div class="container">
+    <div id="root">
+        <canvas bind:this={canvas} style="width: 100%; height: 100%;"></canvas>
+        <div style="display: flex; flex-direction: column; background: darkslategrey">
+            <pre style="flex: 1">{ymax}</pre>
+            <pre>{ymin}</pre>
+        </div>
+        <div class="sep"></div>
+        <div>
+            <div>
+                <pre>Max</pre>
+                <input type="number" bind:value={ymax}/>
+
+                <pre>Min</pre>
+                <input type="number" bind:value={ymin}/>
+
+            </div>
+        </div>
+    </div>
+
+    <pre style="position: absolute; top: .5rem; left: .5rem; z-index: 100; background: black">{key}</pre>
+
+</div>

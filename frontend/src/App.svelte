@@ -7,6 +7,7 @@
     let savedData = [];
     let savedDataLen = 0;
     let saving = false;
+    let zoomlevel = 1000;
     // @ts-ignore
     //=========== MODIFY THIS STRUCT TO MATCH INCOMING DATA! ==============//
     const ct = ctypes.cStruct({
@@ -43,6 +44,8 @@
     let ws;
     let lastData = "NO DATA";
     let data = {}
+
+    let isGraphing = true;
     let graphState = {}
     let graphData = [];
     let currentTime = 0;
@@ -57,15 +60,14 @@
         savedDataLen = savedData.length;
 
         //Update graph data.
-        graphData.push(newData);
+        if (isGraphing) graphData.push(newData);
     }
 
     function handlePostMessage() {
         currentTime = graphData[graphData.length - 1].time;
-        const keptTime = 1000;
         //Delete useless data off the end of graphdata, and trigger a render.
         let i = 0;
-        for (; graphData[i + 1].time < currentTime - keptTime; i++) ; //Find index of first valid time.
+        for (; graphData[i + 1].time < currentTime - zoomlevel; i++) ; //Find index of first valid time.
 
         graphData = graphData.slice(i);
     }
@@ -165,6 +167,14 @@
             ws.close();
     })
 
+    function pauseGraphs() {
+        isGraphing = false;
+    }
+
+    function startGraphs() {
+        graphData = [];
+        isGraphing = true;
+    }
 
 </script>
 
@@ -174,7 +184,7 @@
         font-family: Consolas, monospace;
         background: #424242;
         color: white;
-
+        /*overflow-x: hidden;*/
     }
 
     table, th, td {
@@ -250,9 +260,8 @@
 </style>
 
 <div class="App">
-    <p>{rawLen}</p>
     <p class:wsOk={ws_connected}>Websocket: {ws_connected ? "Connected!" : "Disconnected."}</p>
-    <p>Data: {lastData}</p>
+    <!--    <p>Data: {lastData}</p>-->
 
     <table>
         <thead>
@@ -268,12 +277,21 @@
             </tr>
         {/each}
     </table>
-    <pre>{JSON.stringify(graphState)}</pre>
+    <!--    <pre>{JSON.stringify(graphState)}</pre>-->
+    <div>
+        <span>Graph View: <input type="range" min="1000" max="30000" bind:value={zoomlevel}> {zoomlevel}ms</span>
+        {#if (isGraphing)}
+            <button on:click={pauseGraphs}>Pause Trace</button>
+        {:else}
+            <button on:click={startGraphs}>Resume Trace</button>
+        {/if}
+    </div>
 
     {#each Object.entries(data) as [key, value]}
         {#if (graphState[key] === true)}
-            <p>{key} {graphState[key]}</p>
-            <RTGraph data={graphData} key={key} currentTime={currentTime}/>
+            <div style="width: 100%; height: 100%">
+                <RTGraph data={graphData} key={key} currentTime={currentTime} zoom={zoomlevel}/>
+            </div>
         {/if}
     {/each}
 
