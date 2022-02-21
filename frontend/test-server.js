@@ -28,55 +28,41 @@ const raw_ct = ctypes.cStruct({
     sPID: ctypes.int16,
 });
 
-const ct = ctypes.cStruct({
-    startBytes: ctypes.uint16,
-    time: ctypes.uint32,
-    // Engine
-    engaged: ctypes.boolean,
-    engine: cStruct({
-        State: ctypes.int8,
-        Speed: ctypes.int16,
-        PID: ctypes.int16,
-        P: ctypes.int16,
-        I: ctypes.int16,
-        D: ctypes.int16,
-    }),
+function appendBuffers(buffer1, buffer2) {
+    var tmp = new Uint8Array(buffer1.byteLength + buffer2.byteLength);
+    tmp.set(new Uint8Array(buffer1), 0);
+    tmp.set(new Uint8Array(buffer2), buffer1.byteLength);
+    return tmp.buffer;
+}
 
-    // Primary
-    primary: cStruct({
-        State: ctypes.int8,
-        Enc: ctypes.int32,
-        LC: ctypes.int16,
-        PID: ctypes.int16,
-    }),
-
-    // Secondary
-    secondary: cStruct({
-        State: ctypes.int8,
-        Enc: ctypes.int32,
-        LC: ctypes.int16,
-        PID: ctypes.int16,
-    }),
-});
 
 wss.on('connection', function connection(ws) {
+    let b = new ArrayBuffer(0);
+    let size = 1000;
+    let ctr = 0;
+
     console.log("Connection!");
 
-    ws.on('message', function message(data) {
-        console.log('received: %s', data);
-    });
-
     ws.send('something');
-    setInterval(send_garbage, 1000);
+
+    setInterval(send_garbage, 100);
 
     function send_garbage() {
-        let dat = raw_ct.allocLE({
+        while (b.byteLength < size)
+            b = appendBuffers(b, create_garbage());
+
+        ws.send(b.slice(0, size));
+        b = b.slice(size);
+    }
+
+    function create_garbage() {
+        return raw_ct.allocLE({
             startBytes: 0xAAAA,
-            time: 0x01,
+            time: ctr++,
             // Engine
             engaged: false,
             eState: 1,
-            eSpeed: 2,
+            eSpeed: 100 * Math.sin(ctr / 5),
             ePID: 3,
             eP: 4,
             eI: 5,
@@ -94,14 +80,5 @@ wss.on('connection', function connection(ws) {
             sLC: 3,
             sPID: 4,
         });
-        dat = new Uint8Array(dat);
-        //dat = Uint8Array.from([0xAA, 0xAA]);
-
-        dat[0] = 0xaa;
-        ws.send(new Uint8Array(dat).slice(dat.byteLength / 2));
-        ws.send(new Uint8Array(dat).slice(0, dat.byteLength / 2));
-
-        console.log(dat);
-        //console.log(new Uint8Array(dat));
     }
 });

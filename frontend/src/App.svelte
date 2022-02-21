@@ -1,7 +1,8 @@
 <script lang="ts">
-
+    import {onDestroy} from "svelte";
     import ctypes from "c-type-util"
     import Papa from "papaparse"
+    import RTGraph from "./RTGraph.svelte";
 
     let savedData = [];
     let savedDataLen = 0;
@@ -41,7 +42,10 @@
 
     let ws;
     let lastData = "NO DATA";
-    let data = {engine: {}, primary: {}, secondary: {}}
+    let data = {}
+    let graphState = {}
+    let graphData = [];
+    let currentTime = 0;
 
     function handleData(newData) {
         //console.log(saveState.writer);
@@ -52,17 +56,25 @@
         if (saving) savedData.push(data);
         savedDataLen = savedData.length;
 
+        //Update graph data.
+        graphData.push(newData);
+    }
+
+    function handlePostMessage() {
+        currentTime = graphData[graphData.length - 1].time;
+        const keptTime = 1000;
+        //Delete useless data off the end of graphdata, and trigger a render.
+        let i = 0;
+        for (; graphData[i + 1].time < currentTime - keptTime; i++) ; //Find index of first valid time.
+
+        graphData = graphData.slice(i);
     }
 
     function handleMessage(event) {
-        console.log('Message:', event.data);
+        //console.log('Message:', event.data);
         const evd = event.data;
-        if (evd instanceof Blob) {
-            evd.arrayBuffer().then(resolved => {
-                parseData(resolved);
-                console.log(new Uint8Array(resolved));
-            });
-        }
+        if (evd instanceof Blob)
+            evd.arrayBuffer().then(parseData);
     }
 
     let rawBuf = new Uint8Array(10000);
@@ -73,29 +85,30 @@
         rawBuf.set(new Uint8Array(data), rawLen);
         rawLen += data.byteLength;
 
-        while (rawLen > ct.size) {
+        while (rawLen > ct.size + 2) {
             if (!(rawBuf[0] === 0xAA && rawBuf[1] === 0xAA)) {
                 rawBuf.set(rawBuf.subarray(1)); //Chop off first byte.
                 rawLen--;
                 continue;
             }
-            //console.log(new Uint8Array(data));
-            //console.log(rawBuf.slice(0, 30));
 
             const parsed = ct.readLE(rawBuf.buffer, rawBuf.byteOffset);
+            rawLen -= ct.size;
+            rawBuf.set(rawBuf.subarray(ct.size))
+
             lastData = Array.from(rawBuf.slice(0, ct.size)).map(n => n.toString(16).padStart(2, "0")).join(" ");
             handleData(parsed);
-            rawLen -= ct.size;
         }
 
+        //console.log(rawBuf, rawLen);
+        handlePostMessage();
     }
 
     function connect() {
-        //ws = new WebSocket(`ws://${window.location.hostname}:80/ws`);
-        ws = new WebSocket(`ws://192.168.1.2:80/ws`);
+        ws = new WebSocket(`ws://${window.location.hostname}:80/ws`);
+        //ws = new WebSocket(`ws://192.168.1.2:80/ws`);
 
         ws.onopen = function () {
-            // subscribe to some channels
             ws_connected = true;
         };
 
@@ -141,14 +154,16 @@
         let element = document.createElement('a');
         element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
         element.setAttribute('download', filename);
-
         element.style.display = 'none';
         document.body.appendChild(element);
-
         element.click();
-
         document.body.removeChild(element);
     }
+
+    onDestroy(() => {
+        if (ws)
+            ws.close();
+    })
 
 
 </script>
@@ -235,7 +250,7 @@
 </style>
 
 <div class="App">
-    <strong>Make sure you're using Chrome or the new Edge!! File saving doesn't work on other browsers.</strong>
+    <p>{rawLen}</p>
     <p class:wsOk={ws_connected}>Websocket: {ws_connected ? "Connected!" : "Disconnected."}</p>
     <p>Data: {lastData}</p>
 
@@ -243,14 +258,25 @@
         <thead>
         <td>Name</td>
         <td>Value</td>
+        <td>Graph</td>
         </thead>
         {#each Object.entries(data) as [key, value]}
             <tr>
                 <td>{key}</td>
                 <td>{value}</td>
+                <td><input type="checkbox" bind:checked={graphState[key]}></td>
             </tr>
         {/each}
     </table>
+    <pre>{JSON.stringify(graphState)}</pre>
+
+    {#each Object.entries(data) as [key, value]}
+        {#if (graphState[key] === true)}
+            <p>{key} {graphState[key]}</p>
+            <RTGraph data={graphData} key={key} currentTime={currentTime}/>
+        {/if}
+    {/each}
+
     <div style="height: 10rem"></div>
 
     {#if (!saving)}
