@@ -7,7 +7,7 @@
     let savedData = [];
     let savedDataLen = 0;
     let saving = false;
-    let zoomlevel = 1000;
+    let zoomlevel = 500000;
     // @ts-ignore
     //=========== MODIFY THIS STRUCT TO MATCH INCOMING DATA! ==============//
     const ct = ctypes.cStruct({
@@ -64,6 +64,8 @@
     }
 
     function handlePostMessage() {
+        if(graphData.length < 2) return; //Only run this if we have enough data to be valid.
+
         currentTime = graphData[graphData.length - 1].time;
         //Delete useless data off the end of graphdata, and trigger a render.
         let i = 0;
@@ -279,7 +281,7 @@
     </table>
     <!--    <pre>{JSON.stringify(graphState)}</pre>-->
     <div>
-        <span>Graph View: <input type="range" min="1000" max="30000" bind:value={zoomlevel}> {zoomlevel}ms</span>
+        <span>Graph View: <input type="range" min="500000" max="30000000" bind:value={zoomlevel}> {zoomlevel / 1000}ms</span>
         {#if (isGraphing)}
             <button on:click={pauseGraphs}>Pause Trace</button>
         {:else}
