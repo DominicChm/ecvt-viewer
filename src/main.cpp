@@ -11,14 +11,13 @@
 #define SERIAL_DEBUG Serial
 #define SERIAL_DEBUG_BAUD 115200
 
-#define SSID "rahul-dyno"
+#define SSID "rAhUl-eCvT"
 //#define PASSWORD "123456789"
 
 // Serial port used for getting incoming data from teensy.
 #define SERIAL_DATA Serial2
 #define SERIAL_DATA_BAUD 115200
 
-IPAddress apIP(192, 168, 1, 1);    // Private network for server
 JLed led(LED_BUILTIN);
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
@@ -43,7 +42,7 @@ void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventTyp
 void setup() {
     SERIAL_DEBUG.begin(SERIAL_DEBUG_BAUD);
     SERIAL_DATA.begin(SERIAL_DATA_BAUD); // TEENSY BAUDRATE - CHANGE AS NEEDED.
-
+    SERIAL_DEBUG.println("Starting SPIFFS");
     if (!SPIFFS.begin(FORMAT_SPIFFS_IF_FAILED)) {
         SERIAL_DEBUG.println("SPIFFS Mount Failed");
 
@@ -51,28 +50,30 @@ void setup() {
         while (true) led.Update();
     }
 
+    SERIAL_DEBUG.println("Setting up server");
     ws.onEvent(onWsEvent);
     server.addHandler(&ws);
     server.serveStatic("/", SPIFFS, "/").setDefaultFile("index.html");
 
-    WiFi.disconnect();
-    WiFi.config(
-            IPAddress(192, 168, 1, 2),
+    SERIAL_DEBUG.println("Starting MDNS");
+    if (!MDNS.begin("ecvt")) {
+        Serial.println("Error starting mDNS");
+        led.Blink(100, 100).Blink(1000, 1000).Forever();
+        while (true) led.Update();
+    }
+
+    SERIAL_DEBUG.println("Starting AP");
+    WiFi.softAPConfig(
+            IPAddress(192, 168, 1, 1),
             IPAddress(192, 168, 1, 1),
             IPAddress(255, 255, 255, 0)
     );
-    WiFi.setHostname("dyno");
 
 #ifndef PASSWORD
-    WiFi.begin(SSID);
+    WiFi.softAP(SSID);
 #else
-    WiFi.begin(SSID, PASSWORD);
+    WiFi.softAP(SSID, PASSWORD);
 #endif
-    led.Blink(100, 500).Forever();
-    while (WiFi.status() != WL_CONNECTED) {
-        delay(250);
-        led.Update();
-    }
     Serial.println(WiFi.localIP());
 
     server.begin();
@@ -84,7 +85,6 @@ void setup() {
 enum CommState {
     INITIALIZE,
     WAIT_PACKET_FILL,
-    TRY_VALIDATE_PACKET,
     REPLICATE_FRAME
 };
 const uint8_t START_DATA_SIZE = 2;   // Bytes
