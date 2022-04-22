@@ -14,26 +14,33 @@
         startBytes: ctypes.uint16,
         time: ctypes.uint32,
 
-        // Engine
-        engineEngaged: ctypes.boolean,
-        engineState: ctypes.int8,
-        engineSpeed: ctypes.int16,
-        enginePID: ctypes.int16,
-        engineP: ctypes.int16,
-        engineI: ctypes.int16,
-        engineD: ctypes.int16,
+        //Engine
+        rwSpeed: ctypes.int16,
+        eState: ctypes.int8,
+        eSpeed: ctypes.int16,
+        ePID: ctypes.int16,
+        eP: ctypes.int16,
+        eI: ctypes.int16,
+        eD: ctypes.int16,
 
-        // Primary
-        primaryState: ctypes.int8,
-        primaryEnc: ctypes.int32,
-        primaryLC: ctypes.int16,
-        primaryPID: ctypes.int16,
+        //Primary
+        pState: ctypes.int8,
+        pEncoder: ctypes.int32,
+        pLoadCell: ctypes.int16,
+        pCurrent: ctypes.int16,
+        pPID: ctypes.int16,
 
-        // Secondary
-        secondaryState: ctypes.int8,
-        secondaryEnc: ctypes.int32,
-        secondaryLC: ctypes.int16,
-        secondaryPID: ctypes.int16,
+        //Secondary
+        sState: ctypes.int8,
+        sEncoder: ctypes.int32,
+        sLoadCell: ctypes.int16,
+        sCurrent: ctypes.int16,
+        sPID: ctypes.int16,
+        sEncoderPID: ctypes.int16,
+        sLoadCellPID: ctypes.int16,
+        sLoadCellP: ctypes.int16,
+        sLoadCellI: ctypes.int16,
+        sLoadCellD: ctypes.int16,
     });
 
 
@@ -64,7 +71,7 @@
     }
 
     function handlePostMessage() {
-        if(graphData.length < 2) return; //Only run this if we have enough data to be valid.
+        if (graphData.length < 2) return; //Only run this if we have enough data to be valid.
 
         currentTime = graphData[graphData.length - 1].time;
         //Delete useless data off the end of graphdata, and trigger a render.
@@ -262,7 +269,8 @@
 </style>
 
 <div class="App">
-    <p class:wsOk={ws_connected}>Websocket: {ws_connected ? "Connected!" : "Disconnected."}</p>
+    <p class:wsOk={ws_connected}>
+        Websocket: {ws_connected ? "Connected!" : "Disconnected."}</p>
     <!--    <p>Data: {lastData}</p>-->
 
     <table>
@@ -281,7 +289,9 @@
     </table>
     <!--    <pre>{JSON.stringify(graphState)}</pre>-->
     <div>
-        <span>Graph View: <input type="range" min="500000" max="30000000" bind:value={zoomlevel}> {zoomlevel / 1000}ms</span>
+        <span>Graph View: <input type="range" min="500000" max="30000000"
+                                 bind:value={zoomlevel}> {zoomlevel / 1000}
+            ms</span>
         {#if (isGraphing)}
             <button on:click={pauseGraphs}>Pause Trace</button>
         {:else}
@@ -292,7 +302,8 @@
     {#each Object.entries(data) as [key, value]}
         {#if (graphState[key] === true)}
             <div style="width: 100%; height: 100%">
-                <RTGraph data={graphData} key={key} currentTime={currentTime} zoom={zoomlevel}/>
+                <RTGraph data={graphData} key={key} currentTime={currentTime}
+                         zoom={zoomlevel}/>
             </div>
         {/if}
     {/each}
@@ -300,8 +311,12 @@
     <div style="height: 10rem"></div>
 
     {#if (!saving)}
-        <button disabled={!ws_connected} class="bigButton" on:click={startSave}>Start Saving</button>
+        <button disabled={!ws_connected} class="bigButton" on:click={startSave}>
+            Start Saving
+        </button>
     {:else}
-        <button class="activated bigButton" on:click={stopSave}>Finalize (Saved {savedDataLen})</button>
+        <button class="activated bigButton" on:click={stopSave}>Finalize
+            (Saved {savedDataLen})
+        </button>
     {/if}
 </div>
