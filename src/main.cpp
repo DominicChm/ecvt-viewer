@@ -11,7 +11,7 @@
 #define SERIAL_DEBUG Serial
 #define SERIAL_DEBUG_BAUD 115200
 
-#define SSID "rAhUl-eCvT"
+#define SSID "daqdrew 🥵🍆💦"
 //#define PASSWORD "123456789"
 
 // Serial port used for getting incoming data from teensy.
