@@ -11,11 +11,9 @@
     // @ts-ignore
     //=========== MODIFY THIS STRUCT TO MATCH INCOMING DATA! ==============//
     const ct = ctypes.cStruct({
-        startBytes: ctypes.uint16,
         time: ctypes.uint32,
-
-        //Engine
         rwSpeed: ctypes.int16,
+
         eState: ctypes.int8,
         eSpeed: ctypes.int16,
         ePID: ctypes.int16,
@@ -23,19 +21,17 @@
         eI: ctypes.int16,
         eD: ctypes.int16,
 
-        //Primary
         pState: ctypes.int8,
         pEncoder: ctypes.int32,
-        pLoadCell: ctypes.int16,
-        pCurrent: ctypes.int16,
-        pPID: ctypes.int16,
+        pLoadCellForce: ctypes.int16,
+        pMotorCurrent: ctypes.int16,
+        pControllerOutput: ctypes.int16,
 
-        //Secondary
         sState: ctypes.int8,
         sEncoder: ctypes.int32,
-        sLoadCell: ctypes.int16,
-        sCurrent: ctypes.int16,
-        sPID: ctypes.int16,
+        sLoadCellForce: ctypes.int16,
+        sMotorCurrent: ctypes.int16,
+        sControllerOutput: ctypes.int16,
         sEncoderPID: ctypes.int16,
         sLoadCellPID: ctypes.int16,
         sLoadCellP: ctypes.int16,
@@ -45,8 +41,6 @@
 
 
     let ws_connected = false;
-
-    Uint8Array.from([1, 2, 3]);
 
     let ws;
     let lastData = "NO DATA";
