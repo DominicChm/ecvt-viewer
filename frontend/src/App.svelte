@@ -11,6 +11,7 @@
     // @ts-ignore
     //=========== MODIFY THIS STRUCT TO MATCH INCOMING DATA! ==============//
     const ct = ctypes.cStruct({
+        startBytes: ctypes.uint16,
         time: ctypes.uint32,
         rwSpeed: ctypes.int16,
 

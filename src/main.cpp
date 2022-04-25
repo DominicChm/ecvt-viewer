@@ -55,12 +55,12 @@ void setup() {
     server.addHandler(&ws);
     server.serveStatic("/", SPIFFS, "/").setDefaultFile("index.html");
 
-    SERIAL_DEBUG.println("Starting MDNS");
-    if (!MDNS.begin("ecvt")) {
-        Serial.println("Error starting mDNS");
-        led.Blink(100, 100).Blink(1000, 1000).Forever();
-        while (true) led.Update();
-    }
+//    SERIAL_DEBUG.println("Starting MDNS");
+//    if (!MDNS.begin("ecvt")) {
+//        Serial.println("Error starting mDNS");
+//        led.Blink(100, 100).Blink(1000, 1000).Forever();
+//        while (true) led.Update();
+//    }
 
     SERIAL_DEBUG.println("Starting AP");
     WiFi.softAPConfig(
